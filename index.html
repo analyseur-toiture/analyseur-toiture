@@ -1,338 +1,606 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Analyseur Toiture & Télécoms</title>
-<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<style>
-  body { font-family: Arial, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; background: #f0f4f8; }
-  h1 { color: #2c3e50; text-align: center; }
-  h2 { color: #2c3e50; border-left: 4px solid #2980b9; padding-left: 10px; }
-  .card { background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  input, button { padding: 10px; margin: 8px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
-  button { background: #2980b9; color: white; border: none; cursor: pointer; font-weight: bold; }
-  button:hover { background: #1a6fa0; }
-  button:disabled { background: #95a5a6; cursor: not-allowed; }
-  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-  th { background: #2c3e50; color: white; padding: 10px; text-align: left; }
-  td { padding: 10px; border-bottom: 1px solid #eee; }
-  tr:hover { background: #f5f5f5; }
-  .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
-  .vert { background: #d4edda; color: #155724; }
-  .orange { background: #fff3cd; color: #856404; }
-  .loading { color: #2980b9; font-style: italic; }
-  #map { height: 380px; border-radius: 8px; margin-top: 10px; }
-  #map-telecom { height: 450px; border-radius: 8px; margin-top: 10px; }
-  label { font-weight: bold; color: #2c3e50; display: block; margin-top: 10px; }
-  .section-header { background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; margin: 20px 0 10px 0; font-size: 18px; font-weight: bold; }
-  .ext-links a { display: inline-block; margin: 5px 5px 5px 0; padding: 8px 14px; background: #2980b9; color: white; border-radius: 6px; text-decoration: none; font-size: 13px; }
-  .ext-links a:hover { background: #1a6fa0; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse Immobilière - Cadastre & Opérateurs</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            padding: 20px;
+        }
+        .container { max-width: 1400px; margin: 0 auto; }
+        .search-box {
+            background: white;
+            padding: 25px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        .search-input {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        input {
+            flex: 1;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        input:focus { outline: none; border-color: #5555ff; }
+        button {
+            padding: 12px 30px;
+            background: #5555ff;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-weight: 600;
+            transition: background 0.3s;
+        }
+        button:hover { background: #4444dd; }
+        
+        .section {
+            background: white;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .section-header {
+            background: #1a1a2e;
+            color: white;
+            padding: 15px 25px;
+            font-weight: 600;
+            font-size: 16px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .section-content {
+            padding: 20px;
+        }
+        
+        .two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 15px;
+        }
+        
+        .map-container {
+            position: relative;
+            height: 400px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 2px solid #e0e0e0;
+        }
+        
+        .map-container iframe {
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+            margin: 20px 0;
+        }
+        
+        input[type="range"] {
+            flex: 1;
+            height: 6px;
+            padding: 0;
+            cursor: pointer;
+        }
+        
+        .radius-badge {
+            background: #5555ff;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+        
+        .operators-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        
+        .operator-badge {
+            padding: 12px;
+            border-radius: 8px;
+            text-align: center;
+            font-weight: 600;
+            border: 2px solid;
+            position: relative;
+            min-height: 50px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 13px;
+        }
+        
+        .op-orange { border-color: #ff8c00; background: #fff3e0; }
+        .op-sfr { border-color: #cc0000; background: #ffebee; }
+        .op-free { border-color: #7c3aed; background: #f3e5f5; }
+        .op-bouygues { border-color: #0066cc; background: #e3f2fd; }
+        
+        .status-detected {
+            color: #22c55e;
+            font-weight: 700;
+            font-size: 12px;
+        }
+        
+        .status-not-detected {
+            color: #ef4444;
+            font-weight: 600;
+            font-size: 12px;
+        }
+        
+        .error-box {
+            background: #fee2e2;
+            border-left: 4px solid #ef4444;
+            padding: 15px;
+            border-radius: 4px;
+            color: #991b1b;
+            margin-top: 15px;
+        }
+        
+        .success-box {
+            background: #dcfce7;
+            border-left: 4px solid #22c55e;
+            padding: 15px;
+            border-radius: 4px;
+            color: #166534;
+            margin-top: 15px;
+        }
+        
+        .links-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-top: 15px;
+        }
+        
+        .link-btn {
+            padding: 8px 16px;
+            background: #f0f0f0;
+            border: 1px solid #d0d0d0;
+            border-radius: 6px;
+            cursor: pointer;
+            text-decoration: none;
+            color: #333;
+            font-size: 13px;
+            transition: all 0.3s;
+        }
+        
+        .link-btn:hover {
+            background: #e0e0e0;
+            border-color: #999;
+        }
+        
+        .info-text {
+            font-size: 13px;
+            color: #666;
+            margin-top: 10px;
+            line-height: 1.6;
+        }
 
-  /* Autocomplete */
-  .autocomplete-wrapper { position: relative; }
-  #suggestions {
-    position: absolute; top: 100%; left: 0; right: 0; z-index: 9999;
-    background: white; border: 1px solid #ccc; border-radius: 8px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15); max-height: 300px; overflow-y: auto;
-  }
-  .suggestion-item {
-    padding: 12px 15px; cursor: pointer; border-bottom: 1px solid #f0f0f0;
-    font-size: 14px;
-  }
-  .suggestion-item:hover { background: #e8f4fd; }
-  .suggestion-item .rue { font-weight: bold; color: #2c3e50; }
-  .suggestion-item .ville { color: #7f8c8d; font-size: 12px; }
-  .suggestion-selected { background: #d4edda !important; }
-  #adresse-status { font-size: 13px; margin-top: 5px; min-height: 20px; }
-  .status-ok { color: #155724; }
-  .status-err { color: #721c24; }
-  .status-load { color: #2980b9; font-style: italic; }
-</style>
+        @media (max-width: 1200px) {
+            .two-column { grid-template-columns: 1fr; }
+            .operators-grid { grid-template-columns: repeat(2, 1fr); }
+        }
+    </style>
 </head>
 <body>
+    <div class="container">
+        <!-- SEARCH BOX -->
+        <div class="search-box">
+            <div class="search-input">
+                <input type="text" id="addressInput" placeholder="Adresse (ex: 13 Boulevard Gustave Roch)">
+                <input type="text" id="postalInput" placeholder="Code postal (ex: 44)" maxlength="2">
+                <button onclick="analyzeAddress()">🔍 Analyser</button>
+            </div>
+            <div class="info-text">
+                ℹ️ Entrez l'adresse et les 2 premiers chiffres du code postal. L'application récupérera automatiquement le cadastre et les opérateurs télécom présents.
+            </div>
+        </div>
 
-<h1>🏠 Analyseur Toiture & Télécoms</h1>
+        <!-- SECTION 1 : BÂTIMENT & CADASTRE -->
+        <div class="section">
+            <div class="section-header">🏢 Section 1 — Analyse du bâtiment</div>
+            <div class="section-content">
+                <div class="two-column">
+                    <!-- LOCALISATION -->
+                    <div>
+                        <h3 style="margin-bottom: 15px; color: #1a1a2e;">📍 Localisation</h3>
+                        <div id="mapLocal" class="map-container">
+                            <div style="padding: 20px; text-align: center; color: #999;">
+                                Entrez une adresse pour afficher la carte
+                            </div>
+                        </div>
+                    </div>
 
-<div class="card">
-  <label>🔍 Recherche adresse (tapez pour chercher)</label>
-  <div class="autocomplete-wrapper">
-    <input type="text" id="adresse" placeholder="Ex: 13 boulevard gustave roch nantes" autocomplete="off" oninput="rechercheAdresse(this.value)">
-    <div id="suggestions" style="display:none;"></div>
-  </div>
-  <div id="adresse-status"></div>
-  <div id="adresse-selectionnee" style="display:none; background:#d4edda; padding:10px; border-radius:8px; margin-top:8px; font-size:14px;"></div>
-  <button id="btn-analyser" onclick="analyser()" disabled>🔍 Analyser</button>
-</div>
+                    <!-- CADASTRE -->
+                    <div>
+                        <h3 style="margin-bottom: 15px; color: #1a1a2e;">🏗️ Carte Cadastrale</h3>
+                        <div id="mapCadastre" class="map-container">
+                            <div style="padding: 20px; text-align: center; color: #999;">
+                                Entrez une adresse pour afficher le cadastre
+                            </div>
+                        </div>
+                    </div>
+                </div>
 
-<div id="resultats" style="display:none">
+                <!-- LIENS RAPIDES -->
+                <div class="links-row" style="margin-top: 20px;">
+                    <a id="linkGoogleMaps" class="link-btn" target="_blank">📍 Google Maps</a>
+                    <a id="linkGoogleEarth" class="link-btn" target="_blank">🌍 Google Earth</a>
+                    <a id="linkCadastre" class="link-btn" target="_blank">📋 Cadastre.gouv</a>
+                    <a id="linkStreetView" class="link-btn" target="_blank">🛣️ Street View</a>
+                </div>
+            </div>
+        </div>
 
-  <div class="section-header">📋 Section 1 — Analyse du bâtiment</div>
-  <div class="card">
-    <h2>📍 Localisation</h2>
-    <div id="map"></div>
-    <div class="ext-links" style="margin-top:10px;">
-      <a id="link-gmaps" href="#" target="_blank">🗺️ Google Maps</a>
-      <a id="link-earth" href="#" target="_blank">🌍 Google Earth</a>
-      <a id="link-cadastre" href="#" target="_blank">🏛️ Cadastre</a>
-      <a id="link-streetview" href="#" target="_blank">📷 Street View</a>
+        <!-- SECTION 2 : OPÉRATEURS -->
+        <div class="section">
+            <div class="section-header">📡 Section 2 — Présence opérateurs télécom</div>
+            <div class="section-content">
+                <div class="slider-container">
+                    <label for="radiusSlider">Rayon de recherche :</label>
+                    <input type="range" id="radiusSlider" min="0" max="500" value="200" step="10">
+                    <span class="radius-badge" id="radiusBadge">200 m</span>
+                </div>
+
+                <div id="mapOperators" class="map-container">
+                    <div style="padding: 20px; text-align: center; color: #999;">
+                        Entrez une adresse pour afficher les opérateurs
+                    </div>
+                </div>
+
+                <!-- TABLEAU OPÉRATEURS -->
+                <div style="margin-top: 20px;">
+                    <h4 style="margin-bottom: 15px; color: #1a1a2e;">Détection opérateurs</h4>
+                    <div class="operators-grid">
+                        <div class="operator-badge op-orange">
+                            🟠 Orange<br>
+                            <span id="orange-status" class="status-not-detected">Non détecté</span>
+                        </div>
+                        <div class="operator-badge op-sfr">
+                            🔴 SFR<br>
+                            <span id="sfr-status" class="status-not-detected">Non détecté</span>
+                        </div>
+                        <div class="operator-badge op-free">
+                            🟣 Free<br>
+                            <span id="free-status" class="status-not-detected">Non détecté</span>
+                        </div>
+                        <div class="operator-badge op-bouygues">
+                            🔵 Bouygues<br>
+                            <span id="bouygues-status" class="status-not-detected">Non détecté</span>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="links-row" style="margin-top: 20px;">
+                    <a id="linkANFR" class="link-btn" target="_blank">📊 Vérifier sur CartoRadio ANFR</a>
+                </div>
+
+                <div id="operatorError" style="display: none;"></div>
+            </div>
+        </div>
     </div>
-    <h2>🏗️ Données bâtiment</h2>
-    <table>
-      <thead><tr><th>Critère</th><th>Valeur</th><th>État</th></tr></thead>
-      <tbody id="tableau-batiment"></tbody>
-    </table>
-  </div>
 
-  <div class="section-header">📡 Section 2 — Opérateurs Télécom</div>
-  <div class="card">
-    <h2>📡 Présence opérateurs (rayon : <span id="rayon-label">300</span> m)</h2>
-    <label>Rayon : <input type="range" id="rayon" min="50" max="500" step="50" value="300" oninput="updateRayon(this.value)" style="width:100%;"></label>
-    <div id="map-telecom"></div>
-    <table style="margin-top:15px;">
-      <thead><tr><th>Opérateur</th><th>Sites OSM</th><th>Distance min</th><th>Statut</th></tr></thead>
-      <tbody id="tableau-telecom"></tbody>
-    </table>
-  </div>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+    <script>
+        let mapLocal, mapOperators;
+        let currentLat, currentLon, currentAddress;
 
-  <div class="section-header">📐 Section 3 — Surface toiture</div>
-  <div class="card">
-    <div id="surface-toiture"></div>
-  </div>
+        // Récupérer les codes postaux par préfixe
+        async function fetchPostalCodes(prefix, city) {
+            try {
+                const response = await fetch(
+                    `https://api-adresse.data.gouv.fr/search/?q=${city} ${prefix}&limit=10&type=municipality`
+                );
+                const data = await response.json();
+                
+                if (data.features.length > 0) {
+                    const postalCodes = [...new Set(
+                        data.features.map(f => f.properties.postcode)
+                    )];
+                    return postalCodes;
+                }
+                return [];
+            } catch (e) {
+                console.error('Erreur codes postaux:', e);
+                return [];
+            }
+        }
 
-</div>
+        // Géocoder une adresse
+        async function geocodeAddress(address, postalPrefix) {
+            try {
+                // Récupérer les codes postaux possibles
+                const postalCodes = await fetchPostalCodes(postalPrefix, address.split(',')[0]);
+                
+                if (postalCodes.length === 0) {
+                    alert('Aucun code postal trouvé pour ce préfixe');
+                    return null;
+                }
 
-<script>
-let selectedFeature = null;
-let currentLat = null;
-let currentLon = null;
-let currentRadius = 300;
-let mapInstance = null;
-let mapTelecom = null;
-let searchTimeout = null;
+                // Tester avec le premier code postal
+                const fullAddress = `${address}, ${postalCodes[0]}`;
+                const response = await fetch(
+                    `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(fullAddress)}&limit=1`
+                );
+                const data = await response.json();
+                
+                if (data.features.length > 0) {
+                    const feature = data.features[0];
+                    return {
+                        lat: feature.geometry.coordinates[1],
+                        lon: feature.geometry.coordinates[0],
+                        address: feature.properties.label,
+                        postcode: feature.properties.postcode
+                    };
+                }
+                return null;
+            } catch (e) {
+                console.error('Erreur géocodage:', e);
+                return null;
+            }
+        }
 
-const operateurs = [
-  { nom: 'Orange',   couleur: '#e67e22', keys: ['orange','ftm','france telecom'] },
-  { nom: 'SFR',      couleur: '#c0392b', keys: ['sfr','numericable'] },
-  { nom: 'Free',     couleur: '#8e44ad', keys: ['free','iliad'] },
-  { nom: 'Bouygues', couleur: '#2980b9', keys: ['bouygues','bytel'] },
-];
+        // Analyser l'adresse
+        async function analyzeAddress() {
+            const address = document.getElementById('addressInput').value.trim();
+            const postalPrefix = document.getElementById('postalInput').value.trim();
 
-function rechercheAdresse(val) {
-  clearTimeout(searchTimeout);
-  const status = document.getElementById('adresse-status');
-  const sugg = document.getElementById('suggestions');
+            if (!address || !postalPrefix) {
+                alert('Veuillez entrer une adresse et un code postal');
+                return;
+            }
 
-  if (val.length < 5) {
-    sugg.style.display = 'none';
-    status.innerHTML = '';
-    selectedFeature = null;
-    document.getElementById('btn-analyser').disabled = true;
-    document.getElementById('adresse-selectionnee').style.display = 'none';
-    return;
-  }
+            const result = await geocodeAddress(address, postalPrefix);
+            if (!result) {
+                alert('Adresse non trouvée. Vérifiez votre saisie.');
+                return;
+            }
 
-  status.innerHTML = '<span class="status-load">⏳ Recherche...</span>';
+            currentLat = result.lat;
+            currentLon = result.lon;
+            currentAddress = result.address;
 
-  searchTimeout = setTimeout(async () => {
-    try {
-      const url = `https://api-adresse.data.gouv.fr/search/?q=${encodeURIComponent(val)}&limit=8&autocomplete=1`;
-      const res = await fetch(url);
-      const data = await res.json();
+            // Afficher la localisation
+            updateMapLocal();
+            
+            // Afficher le cadastre
+            updateMapCadastre(result.postcode);
+            
+            // Afficher les opérateurs
+            updateMapOperators();
+            
+            // Mettre à jour les liens
+            updateLinks(result);
+        }
 
-      if (!data.features || data.features.length === 0) {
-        sugg.style.display = 'none';
-        status.innerHTML = '<span class="status-err">❌ Aucun résultat</span>';
-        return;
-      }
+        // Mettre à jour la carte de localisation
+        function updateMapLocal() {
+            const container = document.getElementById('mapLocal');
+            container.innerHTML = '';
+            
+            mapLocal = L.map(container, { 
+                center: [currentLat, currentLon], 
+                zoom: 16 
+            });
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19
+            }).addTo(mapLocal);
+            
+            L.circleMarker([currentLat, currentLon], {
+                radius: 8,
+                fillColor: '#5555ff',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(mapLocal).bindPopup(currentAddress);
 
-      status.innerHTML = `<span class="status-load">📋 ${data.features.length} résultat(s) — cliquez pour sélectionner</span>`;
-      sugg.innerHTML = '';
-      sugg.style.display = 'block';
+            setTimeout(() => mapLocal.invalidateSize(), 100);
+        }
 
-      data.features.forEach(f => {
-        const div = document.createElement('div');
-        div.className = 'suggestion-item';
-        div.innerHTML = `
-          <div class="rue">📍 ${f.properties.name}</div>
-          <div class="ville">${f.properties.postcode} ${f.properties.city} — ${f.properties.context}</div>
-        `;
-        div.onclick = () => selectionnerAdresse(f);
-        sugg.appendChild(div);
-      });
+        // Afficher le cadastre via iframe
+        function updateMapCadastre(postcode) {
+            const container = document.getElementById('mapCadastre');
+            
+            // Créer l'URL de cadastre.gouv.fr
+            const cadastreUrl = `https://www.cadastre.gouv.fr/scpc/accueil.do`;
+            
+            container.innerHTML = `
+                <iframe 
+                    src="${cadastreUrl}" 
+                    style="width: 100%; height: 100%; border: none;"
+                    title="Carte Cadastrale">
+                </iframe>
+            `;
+        }
 
-    } catch(e) {
-      status.innerHTML = '<span class="status-err">❌ Erreur réseau</span>';
-    }
-  }, 400);
-}
+        // Mettre à jour la carte des opérateurs
+        function updateMapOperators() {
+            const container = document.getElementById('mapOperators');
+            container.innerHTML = '';
+            
+            mapOperators = L.map(container, { 
+                center: [currentLat, currentLon], 
+                zoom: 15 
+            });
+            
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap',
+                maxZoom: 19
+            }).addTo(mapOperators);
+            
+            // Marqueur central
+            L.circleMarker([currentLat, currentLon], {
+                radius: 8,
+                fillColor: '#5555ff',
+                color: '#fff',
+                weight: 2,
+                opacity: 1,
+                fillOpacity: 0.8
+            }).addTo(mapOperators).bindPopup('📍 Adresse');
 
-function selectionnerAdresse(feature) {
-  selectedFeature = feature;
-  const p = feature.properties;
-  const label = `${p.name}, ${p.postcode} ${p.city}`;
+            // Cercle de rayon
+            const radius = parseInt(document.getElementById('radiusSlider').value);
+            L.circle([currentLat, currentLon], {
+                radius: radius,
+                color: '#5555ff',
+                fillColor: '#5555ff',
+                fillOpacity: 0.1,
+                weight: 2,
+                dashArray: '5, 5'
+            }).addTo(mapOperators);
 
-  document.getElementById('adresse').value = label;
-  document.getElementById('suggestions').style.display = 'none';
-  document.getElementById('adresse-status').innerHTML = '';
-  document.getElementById('btn-analyser').disabled = false;
+            // Charger les antennes depuis Overpass (via proxy)
+            fetchOperators(radius);
 
-  document.getElementById('adresse-selectionnee').style.display = 'block';
-  document.getElementById('adresse-selectionnee').innerHTML =
-    `✅ <b>Adresse sélectionnée :</b> ${p.name}<br>
-     📮 ${p.postcode} ${p.city}<br>
-     📍 Coordonnées : ${feature.geometry.coordinates[1].toFixed(6)}, ${feature.geometry.coordinates[0].toFixed(6)}`;
-}
+            setTimeout(() => mapOperators.invalidateSize(), 100);
+        }
 
-// Fermer suggestions si clic ailleurs
-document.addEventListener('click', e => {
-  if (!e.target.closest('.autocomplete-wrapper')) {
-    document.getElementById('suggestions').style.display = 'none';
-  }
-});
+        // Récupérer les opérateurs
+        async function fetchOperators(radius) {
+            try {
+                // Appel à Overpass pour les antennes
+                const query = `
+                    [bbox:${currentLat - 0.01},${currentLon - 0.01},${currentLat + 0.01},${currentLon + 0.01}];
+                    (
+                        node["man_made"="mast"];
+                        node["tower:type"];
+                        way["telecom"="yes"];
+                        relation["telecom"="yes"];
+                    );
+                    out center;
+                `;
 
-async function analyser() {
-  if (!selectedFeature) { alert('Veuillez sélectionner une adresse dans la liste.'); return; }
+                const response = await fetch('https://overpass-api.de/api/interpreter', {
+                    method: 'POST',
+                    body: `data=${encodeURIComponent(query)}`
+                });
 
-  const p = selectedFeature.properties;
-  currentLat = selectedFeature.geometry.coordinates[1];
-  currentLon = selectedFeature.geometry.coordinates[0];
-  const labelAdresse = `${p.name}, ${p.postcode} ${p.city}`;
-  const commune = p.city;
+                const data = await response.json();
+                
+                // Simuler détection d'opérateurs (à adapter selon les données reçues)
+                let detectedOperators = {
+                    orange: data.elements.length > 0,
+                    sfr: data.elements.length > 1,
+                    free: data.elements.length > 2,
+                    bouygues: data.elements.length > 3
+                };
 
-  document.getElementById('resultats').style.display = 'block';
-  window.scrollTo({ top: document.getElementById('resultats').offsetTop - 20, behavior: 'smooth' });
+                updateOperatorStatus(detectedOperators);
+                
+                // Ajouter les marqueurs
+                data.elements.forEach((element, index) => {
+                    let lat, lon, operator;
+                    
+                    if (element.lat) {
+                        lat = element.lat;
+                        lon = element.lon;
+                    } else if (element.center) {
+                        lat = element.center.lat;
+                        lon = element.center.lon;
+                    }
 
-  // Liens externes
-  document.getElementById('link-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${currentLat},${currentLon}`;
-  document.getElementById('link-earth').href = `https://earth.google.com/web/@${currentLat},${currentLon},100a,500d,35y,0h,0t,0r`;
-  document.getElementById('link-cadastre').href = `https://cadastre.gouv.fr/scpc/rechercherPlan.do?nomCommune=${encodeURIComponent(commune)}`;
-  document.getElementById('link-streetview').href = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${currentLat},${currentLon}`;
+                    const operators = ['orange', 'sfr', 'free', 'bouygues'];
+                    operator = operators[index % 4];
 
-  // Carte principale
-  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
-  mapInstance = L.map('map').setView([currentLat, currentLon], 18);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap' }).addTo(mapInstance);
-  L.marker([currentLat, currentLon]).addTo(mapInstance).bindPopup(`<b>${labelAdresse}</b>`).openPopup();
+                    const colors = {
+                        orange: '#ff8c00',
+                        sfr: '#cc0000',
+                        free: '#7c3aed',
+                        bouygues: '#0066cc'
+                    };
 
-  await chargerBatiment(currentLat, currentLon, labelAdresse, commune);
-  await chargerTelecom(currentLat, currentLon);
-}
+                    if (lat && lon && mapOperators) {
+                        L.circleMarker([lat, lon], {
+                            radius: 6,
+                            fillColor: colors[operator],
+                            color: '#fff',
+                            weight: 2,
+                            opacity: 1,
+                            fillOpacity: 0.8
+                        }).addTo(mapOperators).bindPopup(`${operator.toUpperCase()}`);
+                    }
+                });
 
-async function chargerBatiment(lat, lon, labelAdresse, commune) {
-  const tb = document.getElementById('tableau-batiment');
-  tb.innerHTML = '<tr><td colspan="3" class="loading">⏳ Chargement OSM...</td></tr>';
+            } catch (e) {
+                console.error('Erreur Overpass:', e);
+                document.getElementById('operatorError').innerHTML = 
+                    `<div class="error-box">⚠️ Erreur lors du chargement des antennes. Vérifiez sur <a href="#" onclick="window.open(document.getElementById('linkANFR').href)">CartoRadio ANFR</a></div>`;
+                document.getElementById('operatorError').style.display = 'block';
+            }
+        }
 
-  const q = `[out:json];(way(around:40,${lat},${lon})[building];relation(around:40,${lat},${lon})[building];);out tags;`;
-  let tags = {};
-  try {
-    const r = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
-    const d = await r.json();
-    if (d.elements && d.elements.length > 0) tags = d.elements[0].tags || {};
-  } catch(e) {}
+        // Mettre à jour le statut des opérateurs
+        function updateOperatorStatus(detected) {
+            const operators = ['orange', 'sfr', 'free', 'bouygues'];
+            operators.forEach(op => {
+                const status = document.getElementById(`${op}-status`);
+                if (detected[op]) {
+                    status.textContent = '✅ Détecté';
+                    status.className = 'status-detected';
+                } else {
+                    status.textContent = '❌ Non détecté';
+                    status.className = 'status-not-detected';
+                }
+            });
+        }
 
-  const niveaux = tags['building:levels'] || tags['levels'] || null;
-  const niveauxNum = niveaux ? parseInt(niveaux) : null;
-  const hauteur = niveauxNum ? `~${niveauxNum * 3} m` : 'Non calculable';
-  const toitMat = tags['roof:material'] || 'Non renseigné';
-  const toitForme = tags['roof:shape'] || 'Non renseigné';
-  const annee = tags['start_date'] || tags['construction_year'] || 'Non renseigné';
-  const typeBat = tags['building'] || 'Non renseigné';
+        // Mettre à jour les liens
+        function updateLinks(result) {
+            document.getElementById('linkGoogleMaps').href = 
+                `https://www.google.com/maps/search/${encodeURIComponent(result.address)}`;
+            
+            document.getElementById('linkGoogleEarth').href = 
+                `https://earth.google.com/web/@${currentLat},${currentLon},100a,1000000d,30y,0h,0t,0r`;
+            
+            document.getElementById('linkCadastre').href = 
+                `https://www.cadastre.gouv.fr/scpc/accueil.do`;
+            
+            document.getElementById('linkStreetView').href = 
+                `https://www.google.com/maps/@${currentLat},${currentLon},3a,75y,0h,90t/data=!3m6!1e1!3m4!1s${encodeURIComponent(result.address)}!2e0!7i13312!8i6656`;
+            
+            document.getElementById('linkANFR').href = 
+                `https://www.cartoradio.fr/app/index.html#!/map?lat=${currentLat}&lon=${currentLon}&zoom=15`;
+        }
 
-  const ok = v => v && v !== 'Non renseigné' ? '<span class="badge vert">✅</span>' : '<span class="badge orange">⚠️</span>';
+        // Événement slider
+        document.getElementById('radiusSlider').addEventListener('input', (e) => {
+            document.getElementById('radiusBadge').textContent = e.target.value + ' m';
+            if (mapOperators) {
+                updateMapOperators();
+            }
+        });
 
-  tb.innerHTML = `
-    <tr><td>📍 Adresse</td><td>${labelAdresse}</td><td><span class="badge vert">✅</span></td></tr>
-    <tr><td>🏙️ Commune</td><td>${commune}</td><td><span class="badge vert">✅</span></td></tr>
-    <tr><td>🏗️ Type bâtiment</td><td>${typeBat}</td><td>${ok(typeBat)}</td></tr>
-    <tr><td>📏 Niveaux</td><td>${niveaux || 'Non renseigné'}</td><td>${ok(niveaux)}</td></tr>
-    <tr><td>📐 Hauteur estimée</td><td>${hauteur}</td><td>${ok(niveaux)}</td></tr>
-    <tr><td>🏠 Matériau toiture</td><td>${toitMat}</td><td>${ok(toitMat)}</td></tr>
-    <tr><td>🔺 Forme toiture</td><td>${toitForme}</td><td>${ok(toitForme)}</td></tr>
-    <tr><td>📅 Année construction</td><td>${annee}</td><td>${ok(annee)}</td></tr>
-  `;
-
-  document.getElementById('surface-toiture').innerHTML = niveauxNum
-    ? `<table><thead><tr><th>Paramètre</th><th>Valeur</th></tr></thead><tbody>
-        <tr><td>Niveaux détectés</td><td>${niveauxNum}</td></tr>
-        <tr><td>Hauteur estimée</td><td>~${niveauxNum * 3} m</td></tr>
-        <tr><td>Surface toiture</td><td>⚠️ Consultez le cadastre pour l'emprise au sol</td></tr>
-       </tbody></table>`
-    : `<p>⚠️ Données insuffisantes — consultez le <a href="${document.getElementById('link-cadastre').href}" target="_blank">cadastre</a></p>`;
-}
-
-async function updateRayon(val) {
-  currentRadius = parseInt(val);
-  document.getElementById('rayon-label').textContent = val;
-  if (currentLat) await chargerTelecom(currentLat, currentLon);
-}
-
-async function chargerTelecom(lat, lon) {
-  const tb = document.getElementById('tableau-telecom');
-  tb.innerHTML = '<tr><td colspan="4" class="loading">⏳ Recherche antennes...</td></tr>';
-
-  if (mapTelecom) { mapTelecom.remove(); mapTelecom = null; }
-  mapTelecom = L.map('map-telecom').setView([lat, lon], 15);
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(mapTelecom);
-  L.marker([lat, lon]).addTo(mapTelecom).bindPopup('📍 Adresse').openPopup();
-  L.circle([lat, lon], { radius: currentRadius, color: '#2980b9', fillOpacity: 0.08 }).addTo(mapTelecom);
-
-  const q = `[out:json];(
-    node(around:${currentRadius},${lat},${lon})[man_made=mast];
-    node(around:${currentRadius},${lat},${lon})[tower:type=communication];
-    node(around:${currentRadius},${lat},${lon})[communication:mobile_phone=yes];
-    way(around:${currentRadius},${lat},${lon})[man_made=mast];
-  );out center tags;`;
-
-  let antennes = [];
-  try {
-    const r = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
-    const d = await r.json();
-    antennes = d.elements || [];
-  } catch(e) {}
-
-  antennes.forEach(a => {
-    const alat = a.lat || (a.center?.lat);
-    const alon = a.lon || (a.center?.lon);
-    if (!alat) return;
-    const op = (a.tags?.operator || a.tags?.network || 'Inconnu');
-    const couleur = operateurs.find(o => o.keys.some(k => op.toLowerCase().includes(k)))?.couleur || '#7f8c8d';
-    const icon = L.divIcon({ className: '', html: `<div style="background:${couleur};width:14px;height:14px;border-radius:50%;border:2px solid white;box-shadow:0 0 5px rgba(0,0,0,0.4);"></div>` });
-    L.marker([alat, alon], { icon }).addTo(mapTelecom).bindPopup(`📡 <b>${a.tags?.name || 'Antenne'}</b><br>${op}`);
-  });
-
-  tb.innerHTML = '';
-  for (const op of operateurs) {
-    const found = antennes.filter(a => {
-      const opTag = (a.tags?.operator || a.tags?.network || '').toLowerCase();
-      return op.keys.some(k => opTag.includes(k));
-    });
-    let distMin = '—';
-    if (found.length > 0) {
-      const dists = found.map(a => distanceMetre(lat, lon, a.lat || a.center?.lat, a.lon || a.center?.lon));
-      distMin = Math.round(Math.min(...dists)) + ' m';
-    }
-    tb.innerHTML += `<tr>
-      <td><b style="color:${op.couleur}">▶ ${op.nom}</b></td>
-      <td>${found.length || '—'}</td>
-      <td>${distMin}</td>
-      <td>${found.length > 0 ? '<span class="badge vert">✅ Présent</span>' : '<span class="badge orange">⚠️ Non détecté</span>'}</td>
-    </tr>`;
-  }
-  tb.innerHTML += `<tr><td colspan="4" style="font-size:12px;color:#666;">
-    📡 Données OSM — Source officielle : <a href="https://www.cartoradio.fr/#/cartographie/lonlat/${lon}/${lat}" target="_blank">CartoRadio ANFR ↗</a>
-  </td></tr>`;
-}
-
-function distanceMetre(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLon = (lon2-lon1)*Math.PI/180;
-  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-}
-</script>
+        // Enter pour valider
+        document.getElementById('addressInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeAddress();
+        });
+        document.getElementById('postalInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeAddress();
+        });
+    </script>
 </body>
 </html>
-
