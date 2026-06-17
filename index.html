@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Analyseur Toiture & Télécoms</title>
+<style>
+  body { font-family: Arial, sans-serif; max-width: 900px; margin: 0 auto; padding: 20px; background: #f0f4f8; }
+  h1 { color: #2c3e50; text-align: center; }
+  .card { background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+  input, button { padding: 10px; margin: 8px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+  button { background: #2980b9; color: white; border: none; cursor: pointer; font-weight: bold; }
+  button:hover { background: #1a6fa0; }
+  table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  th { background: #2c3e50; color: white; padding: 10px; text-align: left; }
+  td { padding: 10px; border-bottom: 1px solid #eee; }
+  tr:hover { background: #f5f5f5; }
+  .badge { display: inline-block; padding: 4px 10px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+  .vert { background: #d4edda; color: #155724; }
+  .orange { background: #fff3cd; color: #856404; }
+  .rouge { background: #f8d7da; color: #721c24; }
+  .loading { color: #2980b9; font-style: italic; }
+  #map { height: 300px; border-radius: 8px; margin-top: 10px; }
+</style>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+
+<h1>🏠 Analyseur Toiture & Télécoms</h1>
+
+<div class="card">
+  <h2>📍 Recherche d'adresse</h2>
+  <input type="text" id="adresse" placeholder="Ex: 12 rue de la Paix" />
+  <input type="text" id="codepostal" placeholder="Code postal (ex: 75001)" />
+  <button onclick="analyser()">🔍 Analyser ce bâtiment</button>
+</div>
+
+<div class="card" id="resultat" style="display:none">
+  <h2>📊 Résultats</h2>
+  <div id="map"></div>
+  <table>
+    <thead><tr><th>Critère</th><th>Valeur</th><th>État</th></tr></thead>
+    <tbody id="tableau"></tbody>
+  </table>
+</div>
+
+<script>
+let map = null;
+
+async function analyser() {
+  const adresse = document.getElementById('adresse').value.trim();
+  const cp = document.getElementById('codepostal').value.trim();
+  if (!adresse || !cp) { alert('Merci de remplir l\'adresse et le code postal'); return; }
+
+  const full = encodeURIComponent(adresse + ' ' + cp + ' France');
+  const tbody = document.getElementById('tableau');
+  tbody.innerHTML = '<tr><td colspan="3" class="loading">⏳ Recherche en cours...</td></tr>';
+  document.getElementById('resultat').style.display = 'block';
+
+  try {
+    // Géocodage
+    const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?q=${full}&format=json&limit=1&addressdetails=1`);
+    const geoData = await geoRes.json();
+    if (!geoData.length) { tbody.innerHTML = '<tr><td colspan="3">❌ Adresse non trouvée</td></tr>'; return; }
+
+    const lat = parseFloat(geoData[0].lat);
+    const lon = parseFloat(geoData[0].lon);
+    const nomCommune = geoData[0].address.city || geoData[0].address.town || geoData[0].address.village || cp;
+
+    // Carte
+    if (map) { map.remove(); }
+    map = L.map('map').setView([lat, lon], 18);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
+    L.marker([lat, lon]).addTo(map).bindPopup(adresse + ' ' + cp).openPopup();
+
+    // Données bâtiment OSM
+    const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];way(around:30,${lat},${lon})[building];out tags;`;
+    const osmRes = await fetch(overpassUrl);
+    const osmData = await osmRes.json();
+    const bat = osmData.elements[0]?.tags || {};
+
+    // Données cadastre / adresse
+    const cadastreRes = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${full}&limit=1`);
+    const cadastreData = await cadastreRes.json();
+    const props = cadastreData.features[0]?.properties || {};
+
+    // Construction du tableau
+    const rows = [
+      ['📍 Commune', nomCommune, 'vert'],
+      ['🏠 Type de bâtiment', bat.building || 'Non précisé', bat.building ? 'vert' : 'orange'],
+      ['🏗️ Niveaux (étages)', bat.building_levels || bat['building:levels'] || 'Inconnu', bat['building:levels'] ? 'vert' : 'orange'],
+      ['🏚️ Matériau toiture', bat['roof:material'] || 'Non renseigné', bat['roof:material'] ? 'vert' : 'orange'],
+      ['📐 Forme toiture', bat['roof:shape'] || 'Non renseigné', bat['roof:shape'] ? 'vert' : 'orange'],
+      ['📅 Année construction', bat.start_date || 'Inconnue', bat.start_date ? (parseInt(bat.start_date) > 1975 ? 'vert' : 'orange') : 'orange'],
+      ['📡 Fibre (estimation)', parseInt(cp) < 70000 ? 'Probable' : 'À vérifier', 'orange'],
+      ['🗺️ Score adresse', props.score ? Math.round(props.score * 100) + '%' : 'N/A', props.score > 0.8 ? 'vert' : 'orange'],
+    ];
+
+    tbody.innerHTML = rows.map(([critere, valeur, badge]) =>
+      `<tr><td>${critere}</td><td>${valeur}</td><td><span class="badge ${badge}">${badge === 'vert' ? '✅' : badge === 'orange' ? '⚠️' : '❌'}</span></td></tr>`
+    ).join('');
+
+  } catch(e) {
+    tbody.innerHTML = `<tr><td colspan="3">❌ Erreur : ${e.message}</td></tr>`;
+  }
+}
+</script>
+</body>
+</html>
