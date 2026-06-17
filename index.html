@@ -41,6 +41,7 @@
         .suggestion-item:hover { background: #f0f0ff; }
         .suggestion-item strong { display: block; color: #333; }
         .suggestion-item small { display: block; color: #666; font-size: 12px; }
+        .suggestion-item.error { color: #c62828; font-style: italic; }
 
         /* SECTIONS */
         .section-header { background: #2c3e50; color: white; padding: 12px 15px; border-radius: 8px; margin-bottom: 20px; font-weight: bold; font-size: 16px; }
@@ -59,6 +60,8 @@
             justify-content: center;
             color: #999;
             font-size: 14px;
+            text-align: center;
+            padding: 20px;
         }
         #cadastreFrame {
             width: 100%;
@@ -96,6 +99,8 @@
         .badge-absent { background: #e74c3c; color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
         .badge-nb { background: #2980b9; color: white; padding: 4px 12px; border-radius: 20px; font-size: 13px; }
         .loading { text-align: center; padding: 30px; color: #5555ff; font-weight: bold; }
+        .alert { background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px; padding: 12px 15px; margin: 10px 0; }
+        .alert.error { background: #f8d7da; border-color: #f5c6cb; color: #721c24; }
     </style>
 </head>
 <body>
@@ -157,6 +162,9 @@
     let mapOperators = null;
     let autoCompleteTimeout = null;
     let antennaMarkers = [];
+    let lastNominatimRequest = 0;
+    const NOMINATIM_DELAY = 2000; // Délai minimum entre 2 requêtes : 2 secondes
+    let geocodeCache = {}; // Cache local pour les adresses
 
     // ===== AUTOCOMPLÉTION =====
     document.getElementById('addressInput').addEventListener('input', async (e) => {
@@ -169,71 +177,76 @@
         }
 
         autoCompleteTimeout = setTimeout(async () => {
+            // Vérifier le cache d'abord
+            if (geocodeCache[value]) {
+                displaySuggestions(geocodeCache[value]);
+                return;
+            }
+
+            // Attendre le délai minimum depuis la dernière requête
+            const timeSinceLastRequest = Date.now() - lastNominatimRequest;
+            if (timeSinceLastRequest < NOMINATIM_DELAY) {
+                await new Promise(resolve => 
+                    setTimeout(resolve, NOMINATIM_DELAY - timeSinceLastRequest)
+                );
+            }
+
             try {
+                lastNominatimRequest = Date.now();
+
                 const response = await fetch(
                     `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value)}&limit=15&addressdetails=1&accept-language=fr`,
                     {
-                        headers: { 'User-Agent': 'AnalyseurToiture/1.0 (contact@example.com)' }
+                        headers: { 
+                            'User-Agent': 'AnalyseurToiture/1.0 (contact@example.com)',
+                            'Accept-Language': 'fr'
+                        }
                     }
                 );
 
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-
-                const results = await response.json();
-
-                if (results.length === 0) {
-                    document.getElementById('suggestions').innerHTML =
-                        '<div class="suggestion-item" style="color:#999;">Aucun résultat trouvé</div>';
-                    return;
+                if (!response.ok) {
+                    if (response.status === 429) {
+                        throw new Error('Trop de requêtes - veuillez attendre');
+                    }
+                    throw new Error(`HTTP ${response.status}`);
                 }
 
-                const html = results.map((s, i) => {
-                    const parts = s.display_name.split(',');
-                    const main = parts[0].trim();
-                    const loc = parts.slice(1, 4).join(',').trim();
-                    return `<div class="suggestion-item" onclick="selectSuggestion(${i}, ${JSON.stringify(JSON.stringify(s))})">
-                        <strong>${main}</strong>
-                        <small>${loc}</small>
-                    </div>`;
-                }).join('');
-
-                document.getElementById('suggestions').innerHTML = html;
+                const results = await response.json();
+                
+                // Mettre en cache
+                geocodeCache[value] = results;
+                
+                displaySuggestions(results);
 
             } catch (err) {
                 console.error('Autocomplétion erreur:', err);
-                // On ne montre pas d'erreur visible, on réessaie silencieusement
                 document.getElementById('suggestions').innerHTML =
-                    '<div class="suggestion-item" style="color:#999;">⏳ Chargement...</div>';
-                
-                // Réessai après 1 seconde
-                setTimeout(async () => {
-                    try {
-                        const value2 = document.getElementById('addressInput').value.trim();
-                        if (value2.length < 3) return;
-                        const response2 = await fetch(
-                            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(value2)}&limit=15&addressdetails=1&accept-language=fr`
-                        );
-                        const results2 = await response2.json();
-                        if (results2.length > 0) {
-                            const html2 = results2.map((s, i) => {
-                                const parts = s.display_name.split(',');
-                                const main = parts[0].trim();
-                                const loc = parts.slice(1, 4).join(',').trim();
-                                return `<div class="suggestion-item" onclick="selectSuggestion(${i}, ${JSON.stringify(JSON.stringify(s))})">
-                                    <strong>${main}</strong>
-                                    <small>${loc}</small>
-                                </div>`;
-                            }).join('');
-                            document.getElementById('suggestions').innerHTML = html2;
-                        }
-                    } catch (e) {
-                        document.getElementById('suggestions').innerHTML =
-                            '<div class="suggestion-item" style="color:#c62828;">⚠️ Service temporairement indisponible</div>';
-                    }
-                }, 1000);
+                    `<div class="suggestion-item error">⚠️ ${err.message}<br><small>Veuillez réessayer dans quelques secondes</small></div>`;
             }
-        }, 600);
+        }, 1000); // Attendre 1 seconde après la dernière frappe
     });
+
+    // ===== AFFICHER LES SUGGESTIONS =====
+    function displaySuggestions(results) {
+        if (results.length === 0) {
+            document.getElementById('suggestions').innerHTML =
+                '<div class="suggestion-item" style="color:#999;">Aucun résultat trouvé</div>';
+            return;
+        }
+
+        const html = results.map((s, i) => {
+            const parts = s.display_name.split(',');
+            const main = parts[0].trim();
+            const loc = parts.slice(1, 4).join(',').trim();
+            const escaped = JSON.stringify(s).replace(/"/g, '"');
+            return `<div class="suggestion-item" onclick="selectSuggestion('${escaped}')">
+                <strong>${main}</strong>
+                <small>${loc}</small>
+            </div>`;
+        }).join('');
+
+        document.getElementById('suggestions').innerHTML = html;
+    }
 
     // Fermer suggestions si clic ailleurs
     document.addEventListener('click', (e) => {
@@ -243,8 +256,8 @@
     });
 
     // ===== SÉLECTIONNER UNE ADRESSE =====
-    function selectSuggestion(index, encodedResult) {
-        const result = JSON.parse(encodedResult);
+    function selectSuggestion(escapedResult) {
+        const result = JSON.parse(escapedResult.replace(/"/g, '"'));
 
         currentLat = parseFloat(result.lat);
         currentLon = parseFloat(result.lon);
@@ -306,7 +319,6 @@
         iframe.style.border = 'none';
         iframe.style.borderRadius = '8px';
 
-        // URL de cadastre.gouv.fr centré sur les coordonnées
         const zoom = 18;
         iframe.src = `https://www.cadastre.gouv.fr/scpc/rechercherPlan.do?SERVICELIFE=true&numeroVoie=&indiceRepetition=&nomVoie=&codePostal=&nomCommune=&codeDepartement=&numeroSection=&numeroParcelle=&nbResultatParPage=25&donneesGenerales.codeCommune=&lon=${currentLon}&lat=${currentLat}&zoom=${zoom}`;
 
@@ -331,12 +343,10 @@
                 attribution: '© OpenStreetMap'
             }).addTo(mapOperators);
 
-            // Marqueur centre
             const iconCenter = L.divIcon({ html: '📍', className: '', iconSize: [30,30], iconAnchor: [15,30] });
             L.marker([currentLat, currentLon], { icon: iconCenter }).addTo(mapOperators)
                 .bindPopup(`<strong>Adresse recherchée</strong><br>${currentAddress}`).openPopup();
 
-            // Cercle de rayon
             L.circle([currentLat, currentLon], {
                 radius: radius,
                 color: '#5555ff',
@@ -345,7 +355,6 @@
                 weight: 2
             }).addTo(mapOperators);
 
-            // Recherche antennes via Overpass API
             searchAntennas(radius);
         }, 100);
     }
@@ -356,7 +365,7 @@
 
         const overpassUrl = 'https://overpass-api.de/api/interpreter';
         const query = `
-            [out:json][timeout:25];
+            [out:json][timeout:30];
             (
                 node["tower:type"="communication"](around:${radius},${currentLat},${currentLon});
                 node["man_made"="mast"](around:${radius},${currentLat},${currentLon});
@@ -382,13 +391,13 @@
 
         } catch (err) {
             console.error('Overpass erreur:', err);
-            // Fallback : utiliser l'API ANFR directement
             document.getElementById('operatorsResult').innerHTML = `
-                <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:15px;margin-top:15px;">
-                    ⚠️ Service Overpass temporairement indisponible.<br>
-                    <a href="https://www.cartoradio.fr/#/?lon=${currentLon}&lat=${currentLat}&zoom=15" target="_blank" style="color:#5555ff;">
-                        👉 Cliquez ici pour voir les antennes sur Cartoradio
-                    </a>
+                <div class="alert error">
+                    ⚠️ <strong>Service temporairement indisponible</strong><br>
+                    Les données des antennes ne peuvent pas être chargées pour le moment.<br><br>
+                    <strong>Solutions :</strong><br>
+                    • Réessayez dans quelques instants<br>
+                    • <a href="https://www.cartoradio.fr/#/?lon=${currentLon}&lat=${currentLat}&zoom=15" target="_blank" style="color:#0066cc;font-weight:bold;">Consultez Cartoradio (ANFR) →</a>
                 </div>
             `;
         }
@@ -396,7 +405,6 @@
 
     // ===== TRAITEMENT ANTENNES =====
     function processAntennas(elements, radius) {
-        // Supprimer anciens marqueurs
         if (antennaMarkers.length > 0) {
             antennaMarkers.forEach(m => mapOperators.removeLayer(m));
             antennaMarkers = [];
@@ -438,7 +446,6 @@
             operatorData[opName].count++;
             operatorData[opName].sites.push({ lat: el.lat, lon: el.lon, dist, tags });
 
-            // Marqueur sur la carte
             const markerIcon = L.divIcon({
                 html: `<div style="background:${color};color:white;padding:4px 8px;border-radius:12px;font-size:11px;font-weight:bold;white-space:nowrap;">${opName}</div>`,
                 className: '',
@@ -457,7 +464,6 @@
             antennaMarkers.push(marker);
         });
 
-        // Tableau résultats
         const operators4 = ['Orange', 'SFR', 'Free', 'Bouygues'];
         let tableRows = operators4.map(op => {
             const d = operatorData[op];
