@@ -8,65 +8,113 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: Arial, sans-serif; max-width: 960px; margin: 0 auto; padding: 20px; background: #f8f8f8; }
-        h1 { color: #2c3e50; text-align: center; }
-        .card { background: white; border-radius: 8px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-        input, button { padding: 10px; margin: 5px; border-radius: 8px; border: 2px solid #5555ff; font-size: 16px; }
-        button { background: #5555ff; color: white; cursor: pointer; font-weight: bold; }
+        body { font-family: Arial, sans-serif; max-width: 1200px; margin: 0 auto; padding: 20px; background: #f5f5f5; }
+        h1 { color: #2c3e50; text-align: center; margin-bottom: 30px; }
+        .card { background: white; border-radius: 8px; padding: 25px; margin: 20px 0; box-shadow: 0 2px 10px rgba(0,0,0,0.1); }
+        label { display: block; margin-top: 15px; font-weight: bold; color: #333; }
+        input { width: 100%; padding: 12px; margin: 8px 0; border: 2px solid #5555ff; border-radius: 8px; font-size: 16px; }
+        input:readonly { background: #f0f0f0; }
+        button { padding: 12px 20px; margin: 5px; border: none; border-radius: 8px; background: #5555ff; color: white; cursor: pointer; font-weight: bold; font-size: 14px; }
         button:hover { background: #4444dd; }
-        .map-container { height: 400px; border-radius: 8px; overflow: hidden; margin: 10px 0; }
-        .section-header { background: #2c3e50; color: white; padding: 12px; border-radius: 8px; margin: 20px 0 10px 0; font-weight: bold; }
-        .links-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
-        .btn-small { padding: 8px 15px; font-size: 14px; margin: 5px; }
-        #suggestions { position: absolute; top: 45px; left: 0; right: 0; background: white; border: 2px solid #5555ff; border-top: none; border-radius: 0 0 8px 8px; max-height: 300px; overflow-y: auto; z-index: 1000; }
-        .suggestion-item { padding: 12px; border-bottom: 1px solid #e0e0e0; cursor: pointer; transition: background 0.2s; }
-        .suggestion-item:hover { background: #f0f0ff; }
+        
+        /* SUGGESTIONS */
         .input-wrapper { position: relative; }
-        h2 { color: #5555ff; margin-top: 20px; }
+        #suggestions { 
+            position: absolute; 
+            top: 100%; 
+            left: 0; 
+            right: 0; 
+            background: white; 
+            border: 2px solid #5555ff; 
+            border-top: none;
+            border-radius: 0 0 8px 8px; 
+            max-height: 250px; 
+            overflow-y: auto; 
+            z-index: 1000; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        .suggestion-item { 
+            padding: 12px 15px; 
+            border-bottom: 1px solid #e0e0e0; 
+            cursor: pointer; 
+            transition: background 0.2s; 
+        }
+        .suggestion-item:hover { background: #f0f0ff; }
+        .suggestion-item strong { display: block; color: #333; }
+        .suggestion-item small { display: block; color: #666; font-size: 12px; }
+
+        /* SECTIONS */
+        .section-header { background: #2c3e50; color: white; padding: 12px 15px; border-radius: 8px; margin: 20px 0 15px 0; font-weight: bold; font-size: 16px; }
+        h2 { color: #5555ff; margin-top: 0; margin-bottom: 20px; }
+
+        /* GRILLES */
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
+        @media (max-width: 800px) { .grid-2 { grid-template-columns: 1fr; } }
+
+        /* CARTES */
+        .map-container { height: 400px; border-radius: 8px; overflow: hidden; margin: 15px 0; border: 2px solid #ddd; }
+        
+        /* LIENS */
+        .links-group { display: flex; gap: 10px; flex-wrap: wrap; margin: 15px 0; }
+        .btn-small { padding: 8px 15px; font-size: 13px; margin: 0; }
+
+        /* SLIDER */
         .slider-container { margin: 20px 0; }
-        input[type="range"] { width: 100%; }
-        .badge { display: inline-block; background: #5555ff; color: white; padding: 5px 15px; border-radius: 20px; font-weight: bold; }
-        .error { color: #e74c3c; padding: 10px; background: #fadbd8; border-radius: 8px; }
+        input[type="range"] { width: 100%; height: 6px; cursor: pointer; }
+        .badge { display: inline-block; background: #5555ff; color: white; padding: 6px 15px; border-radius: 20px; font-weight: bold; font-size: 14px; }
+
+        /* IFRAME CADASTRE */
+        .cadastre-frame { width: 100%; height: 400px; border-radius: 8px; border: 2px solid #ddd; }
+
+        /* MESSAGES */
+        .info { background: #e3f2fd; color: #1565c0; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #1565c0; }
+        .error { background: #ffebee; color: #c62828; padding: 12px; border-radius: 8px; margin: 10px 0; border-left: 4px solid #c62828; }
     </style>
 </head>
 <body>
     <h1>🏠 Analyseur Toiture & Télécoms</h1>
 
+    <!-- ====== SECTION 1 : BÂTIMENT ====== -->
     <div class="card">
-        <h2>📍 Section 1 — Analyse du bâtiment</h2>
+        <div class="section-header">📍 Section 1 — Analyse du bâtiment</div>
         
         <label>Adresse :</label>
         <div class="input-wrapper">
-            <input type="text" id="addressInput" placeholder="Entrez une adresse (ex: 13 boulevard gustave roch)" style="width: 100%;">
+            <input type="text" id="addressInput" placeholder="Ex: 13 boulevard gustave roch" autocomplete="off">
             <div id="suggestions"></div>
         </div>
 
         <label>Ville :</label>
-        <input type="text" id="cityInput" placeholder="Nantes" style="width: 100%;">
+        <input type="text" id="cityInput" placeholder="Ex: Nantes" autocomplete="off">
 
         <label>Code postal :</label>
-        <input type="text" id="postalInput" placeholder="44000" readonly style="width: 100%; background: #f0f0f0;">
+        <input type="text" id="postalInput" placeholder="44000" readonly>
 
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px;">
+        <div class="grid-2">
+            <!-- LOCALISATION -->
             <div>
-                <h3>📍 Localisation</h3>
+                <h2>📍 Localisation</h2>
                 <div id="mapLocation" class="map-container"></div>
                 <div class="links-group">
                     <button class="btn-small" onclick="openGoogleMaps()">🗺️ Google Maps</button>
                     <button class="btn-small" onclick="openGoogleEarth()">🌍 Google Earth</button>
-                    <button class="btn-small" onclick="openCadastre()">📋 Cadastre</button>
+                    <button class="btn-small" onclick="openCadastre()">📋 Cadastre.gouv</button>
                 </div>
             </div>
 
+            <!-- CADASTRE -->
             <div>
-                <h3>📋 Carte Cadastrale</h3>
-                <iframe id="cadastreFrame" style="width: 100%; height: 400px; border-radius: 8px; border: none;" src=""></iframe>
+                <h2>📋 Cadastre (Visualisation)</h2>
+                <div id="cadastreContainer" class="map-container" style="background: #f0f0f0; display: flex; align-items: center; justify-content: center; color: #999;">
+                    Sélectionnez une adresse pour afficher le cadastre
+                </div>
             </div>
         </div>
     </div>
 
+    <!-- ====== SECTION 2 : OPÉRATEURS ====== -->
     <div class="card">
-        <h2>📡 Section 2 — Présence opérateurs télécom</h2>
+        <div class="section-header">📡 Section 2 — Présence opérateurs télécom</div>
         
         <div class="slider-container">
             <label>Rayon de recherche : <span class="badge" id="radiusBadge">200 m</span></label>
@@ -76,20 +124,22 @@
         <div id="mapOperators" class="map-container"></div>
         
         <div class="links-group">
-            <button class="btn-small" onclick="openANFR()">📊 ANFR</button>
-            <button class="btn-small" onclick="openCartoradio()">📡 Cartoradio</button>
+            <button class="btn-small" onclick="openCartoradio()">📡 Cartoradio (ANFR)</button>
         </div>
+
+        <div id="operatorInfo" style="margin-top: 15px;"></div>
     </div>
 
     <script>
         let currentLat, currentLon;
+        let currentAddress = '';
         let mapLocation, mapOperators;
         let suggestions = [];
 
-        // ===== AUTOCOMPLÉTION ADRESSE =====
+        // ===== AUTOCOMPLÉTION (au fur et à mesure) =====
         document.getElementById('addressInput').addEventListener('input', async (e) => {
-            const value = e.target.value;
-            const city = document.getElementById('cityInput').value;
+            const value = e.target.value.trim();
+            const city = document.getElementById('cityInput').value.trim();
             
             if (value.length < 3) {
                 document.getElementById('suggestions').innerHTML = '';
@@ -97,63 +147,75 @@
             }
 
             try {
-                const query = `${value}${city ? ', ' + city : ''}`;
+                const query = city ? `${value}, ${city}` : value;
                 const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=10`
+                    `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=15&addressdetails=1`
                 );
                 suggestions = await response.json();
 
-                const html = suggestions.map((s, i) => `
-                    <div class="suggestion-item" onclick="selectSuggestion(${i})">
-                        <strong>${s.address.split(',')[0]}</strong><br>
-                        <small>${s.address}</small>
-                    </div>
-                `).join('');
+                if (suggestions.length === 0) {
+                    document.getElementById('suggestions').innerHTML = '<div class="suggestion-item" style="color: #999;">Aucun résultat</div>';
+                    return;
+                }
+
+                const html = suggestions.map((s, i) => {
+                    const fullAddress = s.address.display_name;
+                    const parts = fullAddress.split(',');
+                    const mainAddress = parts[0].trim();
+                    const location = parts.slice(1, 3).join(',').trim();
+                    
+                    return `
+                        <div class="suggestion-item" onclick="selectSuggestion(${i})">
+                            <strong>${mainAddress}</strong>
+                            <small>${location}</small>
+                        </div>
+                    `;
+                }).join('');
 
                 document.getElementById('suggestions').innerHTML = html;
 
             } catch (error) {
                 console.error('Erreur autocomplétion:', error);
+                document.getElementById('suggestions').innerHTML = '<div class="suggestion-item" style="color: #c62828;">Erreur de connexion</div>';
             }
         });
 
-        // ===== SÉLECTIONNER UNE SUGGESTION =====
+        // ===== SÉLECTIONNER UNE ADRESSE =====
         function selectSuggestion(index) {
             const result = suggestions[index];
             
             currentLat = parseFloat(result.lat);
             currentLon = parseFloat(result.lon);
+            currentAddress = result.display_name;
 
             // Remplir les champs
-            document.getElementById('addressInput').value = result.address.split(',')[0];
-            document.getElementById('cityInput').value = result.address.split(',')[1]?.trim() || '';
+            const parts = result.display_name.split(',');
+            document.getElementById('addressInput').value = parts[0].trim();
             
-            // Récupérer le code postal
-            const reverseUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${currentLat}&lon=${currentLon}`;
-            fetch(reverseUrl)
-                .then(r => r.json())
-                .then(data => {
-                    const postal = data.address?.postcode || '';
-                    document.getElementById('postalInput').value = postal;
-                });
+            if (result.address.city) {
+                document.getElementById('cityInput').value = result.address.city;
+            }
+            
+            if (result.address.postcode) {
+                document.getElementById('postalInput').value = result.address.postcode;
+            }
 
             // Fermer suggestions
             document.getElementById('suggestions').innerHTML = '';
 
             // Mettre à jour les cartes
             updateMapLocation();
+            updateCadastre();
             updateMapOperators();
+
+            console.log('Adresse sélectionnée:', currentLat, currentLon);
         }
 
         // ===== MISE À JOUR CARTE LOCALISATION =====
         function updateMapLocation() {
             if (!currentLat || !currentLon) return;
             
-            const mapContainer = document.getElementById('mapLocation');
-            
-            if (mapLocation) {
-                mapLocation.remove();
-            }
+            if (mapLocation) mapLocation.remove();
 
             mapLocation = L.map('mapLocation').setView([currentLat, currentLon], 16);
             
@@ -162,8 +224,37 @@
                 maxZoom: 19
             }).addTo(mapLocation);
 
-            L.marker([currentLat, currentLon]).addTo(mapLocation)
-                .bindPopup('<b>' + document.getElementById('addressInput').value + '</b>');
+            L.marker([currentLat, currentLon], {
+                icon: L.icon({
+                    iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
+                    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
+                    iconSize: [25, 41],
+                    iconAnchor: [12, 41],
+                    popupAnchor: [1, -34],
+                    shadowSize: [41, 41]
+                })
+            }).addTo(mapLocation).bindPopup('<b>' + document.getElementById('addressInput').value + '</b>');
+        }
+
+        // ===== MISE À JOUR CADASTRE (iFrame) =====
+        function updateCadastre() {
+            if (!currentLat || !currentLon) return;
+
+            const postal = document.getElementById('postalInput').value;
+            const container = document.getElementById('cadastreContainer');
+            
+            // URL cadastre.gouv avec coordonnées
+            const cadastreUrl = `https://www.cadastre.gouv.fr/scpc/accueil`;
+            
+            // Créer un iframe
+            container.innerHTML = `
+                <iframe 
+                    src="${cadastreUrl}" 
+                    class="cadastre-frame"
+                    title="Cadastre"
+                    allow="geolocation">
+                </iframe>
+            `;
         }
 
         // ===== MISE À JOUR CARTE OPÉRATEURS =====
@@ -171,20 +262,16 @@
             if (!currentLat || !currentLon) return;
 
             const radius = parseInt(document.getElementById('radiusSlider').value);
-            const mapContainer = document.getElementById('mapOperators');
             
-            if (mapOperators) {
-                mapOperators.remove();
-            }
+            if (mapOperators) mapOperators.remove();
 
             mapOperators = L.map('mapOperators').setView([currentLat, currentLon], 16);
             
             L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-                attribution: '© OpenStreetMap',
-                maxZoom: 19
+                attribution: '© OpenStreetMap'
             }).addTo(mapOperators);
 
-            // Marqueur adresse
+            // Point central
             L.marker([currentLat, currentLon], { 
                 icon: L.icon({
                     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-red.png',
@@ -201,25 +288,51 @@
                 color: '#5555ff',
                 fillColor: '#5555ff',
                 fillOpacity: 0.1,
-                radius: radius
+                radius: radius,
+                weight: 2
             }).addTo(mapOperators);
 
-            // Antennes Overpass
+            // Recherche antennes via Overpass API
+            fetchTowerData(radius);
+        }
+
+        // ===== RECHERCHE ANTENNES (Overpass API) =====
+        async function fetchTowerData(radius) {
             try {
-                const bbox = `${currentLat - 0.01},${currentLon - 0.01},${currentLat + 0.01},${currentLon + 0.01}`;
-                const query = `[bbox:${bbox}];(node["man_made"="mast"];node["man_made"="tower"];);out;`;
-                
+                const latMin = currentLat - (radius / 111000);
+                const latMax = currentLat + (radius / 111000);
+                const lonMin = currentLon - (radius / (111000 * Math.cos(currentLat * Math.PI / 180)));
+                const lonMax = currentLon + (radius / (111000 * Math.cos(currentLat * Math.PI / 180)));
+
+                const query = `
+                    [bbox:${latMin},${lonMin},${latMax},${lonMax}];
+                    (
+                        node["man_made"="mast"];
+                        node["man_made"="tower"];
+                        way["man_made"="mast"];
+                        way["man_made"="tower"];
+                    );
+                    out center;
+                `;
+
                 const response = await fetch('https://overpass-api.de/api/interpreter', {
                     method: 'POST',
                     body: query
                 });
+
+                if (!response.ok) throw new Error('Erreur Overpass');
+                
                 const data = await response.json();
+                let count = 0;
 
                 data.elements?.forEach(el => {
-                    if (el.lat && el.lon) {
-                        const dist = haversine(currentLat, currentLon, el.lat, el.lon);
+                    const lat = el.lat || el.center?.lat;
+                    const lon = el.lon || el.center?.lon;
+                    
+                    if (lat && lon) {
+                        const dist = haversine(currentLat, currentLon, lat, lon);
                         if (dist <= radius) {
-                            L.marker([el.lat, el.lon], {
+                            L.marker([lat, lon], {
                                 icon: L.icon({
                                     iconUrl: 'https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-2x-orange.png',
                                     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png',
@@ -229,24 +342,36 @@
                                     shadowSize: [41, 41]
                                 })
                             }).addTo(mapOperators).bindPopup(`<b>Antenne</b><br>${dist.toFixed(0)}m`);
+                            count++;
                         }
                     }
                 });
+
+                document.getElementById('operatorInfo').innerHTML = `
+                    <div class="info">
+                        ✅ <strong>${count} antenne(s) détectée(s)</strong> dans un rayon de ${radius}m
+                    </div>
+                `;
+
             } catch (error) {
-                console.error('Erreur Overpass:', error);
+                console.error('Erreur antennes:', error);
+                document.getElementById('operatorInfo').innerHTML = `
+                    <div class="error">
+                        ⚠️ Erreur lors de la recherche d'antennes
+                    </div>
+                `;
             }
         }
 
         // ===== DISTANCE HAVERSINE =====
         function haversine(lat1, lon1, lat2, lon2) {
-            const R = 6371000;
+            const R = 6371000; // mètres
             const φ1 = lat1 * Math.PI / 180;
             const φ2 = lat2 * Math.PI / 180;
             const Δφ = (lat2 - lat1) * Math.PI / 180;
             const Δλ = (lon2 - lon1) * Math.PI / 180;
             const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-                      Math.cos(φ1) * Math.cos(φ2) *
-                      Math.sin(Δλ/2) * Math.sin(Δλ/2);
+                      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ/2) * Math.sin(Δλ/2);
             const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
             return R * c;
         }
@@ -262,7 +387,7 @@
         // ===== LIENS EXTERNES =====
         function openGoogleMaps() {
             if (!currentLat || !currentLon) {
-                alert('Sélectionnez une adresse d\'abord');
+                alert('❌ Sélectionnez une adresse d\'abord');
                 return;
             }
             window.open(`https://www.google.com/maps?q=${currentLat},${currentLon}`, '_blank');
@@ -270,36 +395,26 @@
 
         function openGoogleEarth() {
             if (!currentLat || !currentLon) {
-                alert('Sélectionnez une adresse d\'abord');
+                alert('❌ Sélectionnez une adresse d\'abord');
                 return;
             }
-            window.open(`https://earth.google.com/web/@${currentLat},${currentLon},0a,1000000m`, '_blank');
+            window.open(`https://earth.google.com/web/@${currentLat},${currentLon},100a,1000000m`, '_blank');
         }
 
         function openCadastre() {
-            const address = document.getElementById('addressInput').value;
-            const postal = document.getElementById('postalInput').value;
-            if (!address || !postal) {
-                alert('Remplissez l\'adresse et le code postal');
+            if (!document.getElementById('postalInput').value) {
+                alert('❌ Sélectionnez une adresse d\'abord');
                 return;
             }
             window.open(`https://www.cadastre.gouv.fr/scpc/accueil`, '_blank');
         }
 
-        function openANFR() {
-            if (!currentLat || !currentLon) {
-                alert('Sélectionnez une adresse d\'abord');
-                return;
-            }
-            window.open(`https://www.anfr.fr/cartoradio/#/mapa/terrestre`, '_blank');
-        }
-
         function openCartoradio() {
             if (!currentLat || !currentLon) {
-                alert('Sélectionnez une adresse d\'abord');
+                alert('❌ Sélectionnez une adresse d\'abord');
                 return;
             }
-            window.open(`https://www.cartoradio.fr/`, '_blank');
+            window.open(`https://www.cartoradio.fr/#/?lon=${currentLon}&lat=${currentLat}&zoom=16`, '_blank');
         }
     </script>
 </body>
