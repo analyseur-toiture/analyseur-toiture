@@ -11,7 +11,7 @@
   h1 { color: #2c3e50; text-align: center; }
   h2 { color: #2c3e50; border-left: 4px solid #2980b9; padding-left: 10px; }
   .card { background: white; border-radius: 12px; padding: 20px; margin: 20px 0; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
-  input, button, select { padding: 10px; margin: 8px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
+  input, button { padding: 10px; margin: 8px 0; width: 100%; box-sizing: border-box; border-radius: 8px; border: 1px solid #ccc; font-size: 16px; }
   button { background: #2980b9; color: white; border: none; cursor: pointer; font-weight: bold; }
   button:hover { background: #1a6fa0; }
   table { width: 100%; border-collapse: collapse; margin-top: 10px; }
@@ -23,14 +23,14 @@
   .orange { background: #fff3cd; color: #856404; }
   .rouge { background: #f8d7da; color: #721c24; }
   .loading { color: #2980b9; font-style: italic; }
-  #map { height: 400px; border-radius: 8px; margin-top: 10px; }
+  #map { height: 380px; border-radius: 8px; margin-top: 10px; }
   #map-telecom { height: 450px; border-radius: 8px; margin-top: 10px; }
-  .section-title { background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; margin: 20px 0 10px 0; }
-  .operateur-table th { background: #1a6fa0; }
-  .present { color: #155724; font-weight: bold; }
-  .absent { color: #721c24; }
-  #radius-control { margin: 10px 0; }
-  label { font-weight: bold; color: #2c3e50; }
+  label { font-weight: bold; color: #2c3e50; display: block; margin-top: 10px; }
+  .section-header { background: #2c3e50; color: white; padding: 10px 15px; border-radius: 8px; margin: 20px 0 10px 0; font-size: 18px; font-weight: bold; }
+  #adresse-confirmee { color: green; font-style: italic; margin-top: 6px; font-size: 14px; }
+  .ext-links a { display: inline-block; margin: 5px 5px 5px 0; padding: 8px 14px; background: #2980b9; color: white; border-radius: 6px; text-decoration: none; font-size: 13px; }
+  .ext-links a:hover { background: #1a6fa0; }
+  input[type=range] { width: 100%; }
 </style>
 </head>
 <body>
@@ -39,47 +39,54 @@
 
 <div class="card">
   <label>Adresse</label>
-  <input type="text" id="adresse" placeholder="Ex: 111 avenue Victor Hugo">
+  <input type="text" id="adresse" placeholder="Ex: 13 boulevard gustave roch">
   <label>Code postal</label>
-  <input type="text" id="codepostal" placeholder="Ex: 75016">
+  <input type="text" id="codepostal" placeholder="Ex: 44000">
   <label>Ville</label>
-  <input type="text" id="ville" placeholder="Ex: Paris">
+  <input type="text" id="ville" placeholder="Ex: Nantes">
   <button onclick="analyser()">🔍 Analyser</button>
-  <p id="status" class="loading"></p>
+  <div id="adresse-confirmee"></div>
 </div>
 
 <div id="resultats" style="display:none">
 
-  <!-- SECTION 1 : BÂTIMENT -->
+  <!-- SECTION 1 -->
+  <div class="section-header">📋 Section 1 — Analyse du bâtiment</div>
   <div class="card">
-    <h2>📋 Section 1 — Analyse du bâtiment</h2>
+    <h2>📍 Localisation</h2>
     <div id="map"></div>
+    <div class="ext-links" style="margin-top:10px;">
+      <a id="link-gmaps" href="#" target="_blank">🗺️ Google Maps</a>
+      <a id="link-earth" href="#" target="_blank">🌍 Google Earth</a>
+      <a id="link-cadastre" href="#" target="_blank">🏛️ Cadastre</a>
+      <a id="link-streetview" href="#" target="_blank">📷 Street View</a>
+    </div>
+    <h2>🏗️ Données bâtiment</h2>
     <table>
       <thead><tr><th>Critère</th><th>Valeur</th><th>État</th></tr></thead>
       <tbody id="tableau-batiment"></tbody>
     </table>
-    <div id="cadastre-info" style="margin-top:15px; padding:10px; background:#eaf4fb; border-radius:8px;"></div>
   </div>
 
-  <!-- SECTION 2 : TÉLÉCOMS -->
+  <!-- SECTION 2 -->
+  <div class="section-header">📡 Section 2 — Opérateurs Télécom</div>
   <div class="card">
-    <h2>📡 Section 2 — Présence opérateurs télécom</h2>
-    <div id="radius-control">
-      <label>Rayon de recherche : <span id="radius-val">300</span> m</label>
-      <input type="range" id="radius-slider" min="0" max="500" value="300" step="50" oninput="updateRadius(this.value)">
-    </div>
+    <h2>📡 Présence opérateurs (rayon : <span id="rayon-label">300</span> m)</h2>
+    <label>Rayon de recherche : <input type="range" id="rayon" min="50" max="500" step="50" value="300" oninput="updateRayon(this.value)"></label>
     <div id="map-telecom"></div>
-    <table class="operateur-table" style="margin-top:15px">
-      <thead><tr><th>Opérateur</th><th>Antennes trouvées</th><th>Distance min</th><th>État</th></tr></thead>
+    <table style="margin-top:15px;">
+      <thead><tr><th>Opérateur</th><th>Sites détectés</th><th>Distance min</th><th>Statut</th></tr></thead>
       <tbody id="tableau-telecom"></tbody>
     </table>
-    <p style="font-size:12px;color:#888;">Source : OpenCelliD / données publiques ANFR approximatives</p>
+    <div style="margin-top:10px;font-size:13px;">
+      📡 <a id="link-cartoradio" href="#" target="_blank">Voir sur CartoRadio ANFR ↗</a>
+    </div>
   </div>
 
-  <!-- SECTION 3 : SURFACE TERRASSE -->
+  <!-- SECTION 3 -->
+  <div class="section-header">📐 Section 3 — Surface toiture estimée</div>
   <div class="card">
-    <h2>📐 Section 3 — Surface estimée de la toiture/terrasse</h2>
-    <div id="surface-info"></div>
+    <div id="surface-toiture"></div>
   </div>
 
 </div>
@@ -87,222 +94,248 @@
 <script>
 let mapInstance = null;
 let mapTelecom = null;
-let circleLayer = null;
 let currentLat = null;
 let currentLon = null;
 let currentRadius = 300;
-let antennesData = [];
+let antenneData = [];
+
+const operateurs = [
+  { nom: 'Orange', couleur: '#e67e22', keys: ['orange','ftm'] },
+  { nom: 'SFR', couleur: '#c0392b', keys: ['sfr','numericable'] },
+  { nom: 'Free', couleur: '#8e44ad', keys: ['free','iliad'] },
+  { nom: 'Bouygues', couleur: '#2980b9', keys: ['bouygues','bytel'] },
+];
 
 async function analyser() {
   const adresse = document.getElementById('adresse').value.trim();
   const cp = document.getElementById('codepostal').value.trim();
   const ville = document.getElementById('ville').value.trim();
-  const status = document.getElementById('status');
 
-  if (!adresse || !cp) { alert('Veuillez entrer une adresse et un code postal.'); return; }
+  if (!adresse || !cp || !ville) { alert('Merci de remplir tous les champs.'); return; }
 
-  status.textContent = '⏳ Recherche en cours...';
-  document.getElementById('resultats').style.display = 'none';
+  document.getElementById('adresse-confirmee').innerHTML = '⏳ Recherche en cours...';
 
-  // 1. Géocodage via API adresse.data.gouv.fr
+  // API adresse avec q + postcode + city pour forcer la précision
   const query = encodeURIComponent(`${adresse} ${cp} ${ville}`);
-  const geoResp = await fetch(`https://api-adresse.data.gouv.fr/search/?q=${query}&limit=1`);
-  const geoData = await geoResp.json();
+  const url = `https://api-adresse.data.gouv.fr/search/?q=${query}&postcode=${cp}&limit=5`;
 
-  if (!geoData.features || geoData.features.length === 0) {
-    status.textContent = '❌ Adresse non trouvée.';
+  let lat, lon, labelAdresse, commune;
+
+  try {
+    const res = await fetch(url);
+    const data = await res.json();
+
+    if (!data.features || data.features.length === 0) {
+      document.getElementById('adresse-confirmee').innerHTML = '❌ Adresse non trouvée.';
+      return;
+    }
+
+    // Cherche le meilleur résultat correspondant à la ville demandée
+    let best = null;
+    for (const f of data.features) {
+      const cityMatch = (f.properties.city || '').toLowerCase() === ville.toLowerCase() ||
+                        (f.properties.postcode || '') === cp;
+      if (cityMatch) { best = f; break; }
+    }
+    if (!best) best = data.features[0];
+
+    lat = best.geometry.coordinates[1];
+    lon = best.geometry.coordinates[0];
+    labelAdresse = best.properties.label;
+    commune = best.properties.city || ville;
+
+    document.getElementById('adresse-confirmee').innerHTML = `✅ Adresse trouvée : <b>${labelAdresse}</b>`;
+
+  } catch(e) {
+    document.getElementById('adresse-confirmee').innerHTML = '❌ Erreur API adresse.';
     return;
   }
 
-  const feat = geoData.features[0];
-  currentLon = feat.geometry.coordinates[0];
-  currentLat = feat.geometry.coordinates[1];
-  const communeAPI = feat.properties.city || feat.properties.municipality || '';
-  const codeInsee = feat.properties.citycode || '';
-  const label = feat.properties.label || '';
-  const score = Math.round((feat.properties.score || 0) * 100);
+  currentLat = lat;
+  currentLon = lon;
 
-  status.textContent = '✅ Adresse trouvée : ' + label;
+  document.getElementById('resultats').style.display = 'block';
 
-  // 2. Données OSM Overpass
-  const overpassUrl = `https://overpass-api.de/api/interpreter?data=[out:json];way(around:50,${currentLat},${currentLon})[building];out tags;`;
-  let niveaux = 'N/A', toitMatiere = 'Non renseigné', toitForme = 'Non renseigné', annee = 'Non renseigné', hauteur = 'N/A', typeBat = 'N/A', surface = 'N/A';
+  // Liens externes
+  document.getElementById('link-gmaps').href = `https://www.google.com/maps/search/?api=1&query=${lat},${lon}`;
+  document.getElementById('link-earth').href = `https://earth.google.com/web/@${lat},${lon},100a,500d,35y,0h,0t,0r`;
+  document.getElementById('link-cadastre').href = `https://cadastre.gouv.fr/scpc/rechercherPlan.do?codeDepartement=&codeCommune=&nomCommune=${encodeURIComponent(ville)}&adresse=${encodeURIComponent(adresse)}`;
+  document.getElementById('link-streetview').href = `https://www.google.com/maps/@?api=1&map_action=pano&viewpoint=${lat},${lon}`;
+  document.getElementById('link-cartoradio').href = `https://www.cartoradio.fr/#/cartographie/lonlat/${lon}/${lat}`;
+
+  // Carte principale
+  if (mapInstance) { mapInstance.remove(); mapInstance = null; }
+  mapInstance = L.map('map').setView([lat, lon], 17);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    attribution: '© OpenStreetMap'
+  }).addTo(mapInstance);
+
+  const marker = L.marker([lat, lon]).addTo(mapInstance);
+  marker.bindPopup(`<b>${labelAdresse}</b>`).openPopup();
+
+  // Données bâtiment OSM
+  await chargerBatiment(lat, lon, labelAdresse, commune);
+
+  // Télécoms
+  await chargerTelecom(lat, lon);
+}
+
+async function chargerBatiment(lat, lon, labelAdresse, commune) {
+  const tb = document.getElementById('tableau-batiment');
+  tb.innerHTML = '<tr><td colspan="3" class="loading">⏳ Chargement données OSM...</td></tr>';
+
+  const overpass = `https://overpass-api.de/api/interpreter?data=` +
+    encodeURIComponent(`[out:json];(way(around:30,${lat},${lon})[building];relation(around:30,${lat},${lon})[building];);out tags;`);
+
+  let niveaux = null, toitMateriaux = 'Non renseigné', toitForme = 'Non renseigné',
+      annee = 'Non renseigné', typeBat = 'Non renseigné';
 
   try {
-    const osmResp = await fetch(overpassUrl);
-    const osmData = await osmResp.json();
-    if (osmData.elements && osmData.elements.length > 0) {
-      const tags = osmData.elements[0].tags || {};
-      niveaux = tags['building:levels'] || tags['levels'] || 'N/A';
-      toitMatiere = tags['roof:material'] || tags['building:roof:material'] || 'Non renseigné';
-      toitForme = tags['roof:shape'] || 'Non renseigné';
-      annee = tags['start_date'] || tags['construction_date'] || 'Non renseigné';
-      typeBat = tags['building'] || 'N/A';
-      surface = tags['building:area'] || 'N/A';
-      if (niveaux !== 'N/A') {
-        hauteur = (parseInt(niveaux) * 3) + ' m (estimation)';
-      }
+    const r = await fetch(overpass);
+    const d = await r.json();
+    if (d.elements && d.elements.length > 0) {
+      const t = d.elements[0].tags || {};
+      niveaux = t['building:levels'] || t['levels'] || null;
+      toitMateriaux = t['roof:material'] || t['building:material'] || 'Non renseigné';
+      toitForme = t['roof:shape'] || 'Non renseigné';
+      annee = t['start_date'] || t['construction_year'] || 'Non renseigné';
+      typeBat = t['building'] || 'Non renseigné';
     }
   } catch(e) {}
 
-  // Affichage carte principale
-  document.getElementById('resultats').style.display = 'block';
-  setTimeout(() => {
-    if (mapInstance) { mapInstance.remove(); mapInstance = null; }
-    mapInstance = L.map('map').setView([currentLat, currentLon], 17);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(mapInstance);
-    L.marker([currentLat, currentLon]).addTo(mapInstance)
-      .bindPopup(`<b>${label}</b>`).openPopup();
-  }, 100);
+  const niveauxNum = niveaux ? parseInt(niveaux) : null;
+  const hauteur = niveauxNum ? `~${niveauxNum * 3} m` : 'Non calculable';
 
-  // Tableau bâtiment
-  const tb = document.getElementById('tableau-batiment');
+  const badge = (v) => v && v !== 'Non renseigné'
+    ? `<span class="badge vert">✅</span>`
+    : `<span class="badge orange">⚠️</span>`;
+
   tb.innerHTML = `
-    <tr><td>📍 Commune détectée</td><td>${communeAPI}</td><td><span class="badge vert">✅</span></td></tr>
-    <tr><td>🏗️ Type de bâtiment</td><td>${typeBat}</td><td><span class="badge ${typeBat!=='N/A'?'vert':'orange'}">${typeBat!=='N/A'?'✅':'⚠️'}</span></td></tr>
-    <tr><td>🔢 Niveaux (étages)</td><td>${niveaux}</td><td><span class="badge ${niveaux!=='N/A'?'vert':'orange'}">${niveaux!=='N/A'?'✅':'⚠️'}</span></td></tr>
-    <tr><td>📏 Hauteur estimée</td><td>${hauteur}</td><td><span class="badge ${hauteur!=='N/A'?'vert':'orange'}">${hauteur!=='N/A'?'✅':'⚠️'}</span></td></tr>
-    <tr><td>🏠 Matériau toiture</td><td>${toitMatiere}</td><td><span class="badge ${toitMatiere!=='Non renseigné'?'vert':'orange'}">${toitMatiere!=='Non renseigné'?'✅':'⚠️'}</span></td></tr>
-    <tr><td>🔺 Forme toiture</td><td>${toitForme}</td><td><span class="badge ${toitForme!=='Non renseigné'?'vert':'orange'}">${toitForme!=='Non renseigné'?'✅':'⚠️'}</span></td></tr>
-    <tr><td>📅 Année construction</td><td>${annee}</td><td><span class="badge ${annee!=='Non renseigné'?'vert':'orange'}">${annee!=='Non renseigné'?'✅':'⚠️'}</span></td></tr>
-    <tr><td>🎯 Score adresse</td><td>${score}%</td><td><span class="badge ${score>80?'vert':score>50?'orange':'rouge'}">${score>80?'✅':score>50?'⚠️':'❌'}</span></td></tr>
+    <tr><td>📍 Adresse confirmée</td><td>${labelAdresse}</td><td><span class="badge vert">✅</span></td></tr>
+    <tr><td>🏙️ Commune</td><td>${commune}</td><td><span class="badge vert">✅</span></td></tr>
+    <tr><td>🏗️ Type bâtiment</td><td>${typeBat}</td><td>${badge(typeBat)}</td></tr>
+    <tr><td>📏 Niveaux (étages)</td><td>${niveaux || 'Non renseigné'}</td><td>${badge(niveaux)}</td></tr>
+    <tr><td>📐 Hauteur estimée</td><td>${hauteur}</td><td>${badge(niveaux)}</td></tr>
+    <tr><td>🏠 Matériau toiture</td><td>${toitMateriaux}</td><td>${badge(toitMateriaux)}</td></tr>
+    <tr><td>🔺 Forme toiture</td><td>${toitForme}</td><td>${badge(toitForme)}</td></tr>
+    <tr><td>📅 Année construction</td><td>${annee}</td><td>${badge(annee)}</td></tr>
   `;
 
-  // Cadastre
-  document.getElementById('cadastre-info').innerHTML = `
-    <b>🗺️ Lien Cadastre :</b> 
-    <a href="https://cadastre.gouv.fr/scpc/rechercherPlan.do?numeroVoie=&nomVoie=${encodeURIComponent(adresse)}&codePostal=${cp}&nomCommune=${encodeURIComponent(ville)}" target="_blank">
-    Voir sur cadastre.gouv.fr ↗</a><br>
-    <b>Code INSEE :</b> ${codeInsee}
-  `;
-
-  // Surface
-  document.getElementById('surface-info').innerHTML = surface !== 'N/A'
-    ? `<p>📐 Surface estimée du bâtiment : <b>${surface} m²</b></p>`
-    : `<p>⚠️ Surface non disponible dans OSM pour cette adresse.<br>
-       💡 Consultez le cadastre pour obtenir la surface exacte de la parcelle.</p>
-       <a href="https://cadastre.gouv.fr/scpc/rechercherPlan.do?codePostal=${cp}&nomCommune=${encodeURIComponent(ville)}" target="_blank" style="color:#2980b9;">Ouvrir le cadastre ↗</a>`;
-
-  // Carte télécom
-  setTimeout(() => {
-    if (mapTelecom) { mapTelecom.remove(); mapTelecom = null; }
-    mapTelecom = L.map('map-telecom').setView([currentLat, currentLon], 15);
-    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-      attribution: '© OpenStreetMap'
-    }).addTo(mapTelecom);
-    L.marker([currentLat, currentLon], {
-      icon: L.divIcon({className:'', html:'<div style="background:#e74c3c;width:14px;height:14px;border-radius:50%;border:2px solid white;"></div>'})
-    }).addTo(mapTelecom).bindPopup('<b>Adresse analysée</b>');
-    circleLayer = L.circle([currentLat, currentLon], {
-      radius: currentRadius, color: '#2980b9', fillColor: '#2980b9', fillOpacity: 0.08
-    }).addTo(mapTelecom);
-
-    chargerAntennes();
-  }, 200);
-}
-
-function updateRadius(val) {
-  currentRadius = parseInt(val);
-  document.getElementById('radius-val').textContent = val;
-  if (circleLayer && mapTelecom) {
-    circleLayer.setRadius(currentRadius);
-    chargerAntennes();
+  // Surface toiture estimée (Section 3)
+  const surfaceDiv = document.getElementById('surface-toiture');
+  if (niveauxNum) {
+    surfaceDiv.innerHTML = `
+      <table>
+        <thead><tr><th>Paramètre</th><th>Valeur</th></tr></thead>
+        <tbody>
+          <tr><td>Niveaux détectés</td><td>${niveauxNum}</td></tr>
+          <tr><td>Hauteur estimée</td><td>~${niveauxNum * 3} m</td></tr>
+          <tr><td>Surface toiture estimée</td><td>⚠️ Nécessite emprise au sol (cadastre)</td></tr>
+        </tbody>
+      </table>
+      <p style="font-size:13px;color:#666;">💡 Pour la surface exacte, consultez le cadastre via le lien ci-dessus.</p>`;
+  } else {
+    surfaceDiv.innerHTML = `<p class="orange">⚠️ Données insuffisantes pour calculer la surface.</p>`;
   }
 }
 
-async function chargerAntennes() {
-  if (!currentLat) return;
+async function updateRayon(val) {
+  currentRadius = parseInt(val);
+  document.getElementById('rayon-label').textContent = val;
+  if (currentLat) await chargerTelecom(currentLat, currentLon);
+}
+
+async function chargerTelecom(lat, lon) {
   const tb = document.getElementById('tableau-telecom');
   tb.innerHTML = '<tr><td colspan="4" class="loading">⏳ Recherche antennes...</td></tr>';
 
-  const operateurs = [
-    { nom: 'Orange', mnc: '01', couleur: '#ff8c00' },
-    { nom: 'SFR', mnc: '10', couleur: '#e74c3c' },
-    { nom: 'Free', mnc: '15', couleur: '#2980b9' },
-    { nom: 'Bouygues', mnc: '20', couleur: '#27ae60' }
-  ];
+  // Carte télécom
+  if (mapTelecom) { mapTelecom.remove(); mapTelecom = null; }
+  mapTelecom = L.map('map-telecom').setView([lat, lon], 15);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OSM' }).addTo(mapTelecom);
 
-  // Overpass pour antennes télécom
-  const overpassTelecom = `https://overpass-api.de/api/interpreter?data=[out:json];(node(around:${currentRadius},${currentLat},${currentLon})[man_made=mast];node(around:${currentRadius},${currentLat},${currentLon})[man_made=tower][tower:type=communication];node(around:${currentRadius},${currentLat},${currentLon})[telecom=antenna];way(around:${currentRadius},${currentLat},${currentLon})[man_made=mast];);out center tags;`;
+  // Marqueur adresse
+  L.marker([lat, lon]).addTo(mapTelecom).bindPopup('📍 Adresse analysée').openPopup();
+
+  // Cercle rayon
+  let cercle = L.circle([lat, lon], { radius: currentRadius, color: '#2980b9', fillOpacity: 0.08 }).addTo(mapTelecom);
+
+  // Requête Overpass antennes
+  const q = `[out:json];(
+    node(around:${currentRadius},${lat},${lon})[man_made=mast];
+    node(around:${currentRadius},${lat},${lon})[man_made=tower][tower:type=communication];
+    node(around:${currentRadius},${lat},${lon})[tower:type=communication];
+    node(around:${currentRadius},${lat},${lon})[communication:mobile_phone=yes];
+    way(around:${currentRadius},${lat},${lon})[man_made=mast];
+  );out center tags;`;
 
   let antennes = [];
   try {
-    const r = await fetch(overpassTelecom);
+    const r = await fetch('https://overpass-api.de/api/interpreter?data=' + encodeURIComponent(q));
     const d = await r.json();
     antennes = d.elements || [];
+    antenneData = antennes;
   } catch(e) {}
 
-  // Effacer anciens marqueurs antennes
-  if (mapTelecom._antenneLayers) {
-    mapTelecom._antenneLayers.forEach(l => mapTelecom.removeLayer(l));
-  }
-  mapTelecom._antenneLayers = [];
-
+  // Marqueurs antennes
   antennes.forEach(a => {
-    const lat = a.lat || (a.center && a.center.lat);
-    const lon = a.lon || (a.center && a.center.lon);
-    if (!lat || !lon) return;
-    const icon = L.divIcon({className:'', html:'<div style="background:#8e44ad;width:10px;height:10px;border-radius:50%;border:2px solid white;"></div>'});
-    const m = L.marker([lat, lon], {icon}).addTo(mapTelecom);
+    const alat = a.lat || (a.center && a.center.lat);
+    const alon = a.lon || (a.center && a.center.lon);
+    if (!alat) return;
     const tags = a.tags || {};
-    m.bindPopup(`📡 ${tags.name || tags['tower:type'] || 'Antenne'}<br>${tags.operator || ''}`);
-    mapTelecom._antenneLayers.push(m);
+    const op = (tags.operator || tags.network || 'Inconnu');
+    const couleur = operateurs.find(o => o.keys.some(k => op.toLowerCase().includes(k)))?.couleur || '#7f8c8d';
+    const icon = L.divIcon({ className: '', html: `<div style="background:${couleur};width:12px;height:12px;border-radius:50%;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,0.5);"></div>` });
+    L.marker([alat, alon], { icon }).addTo(mapTelecom)
+      .bindPopup(`📡 <b>${tags.name || 'Antenne'}</b><br>Opérateur: ${op}`);
   });
 
-  // Tableau opérateurs - données ANFR via cartoradio approximation
+  // Tableau opérateurs
   tb.innerHTML = '';
-  // On utilise l'API ARCEP/ANFR ouverte
   for (const op of operateurs) {
-    const url = `https://www.cartoradio.fr/api/equipment/stations/bycoords/${currentLat}/${currentLon}?dist=${currentRadius}&operateur=${encodeURIComponent(op.nom)}`;
-    let count = 0, distMin = 'N/A';
-
-    // Fallback : on compte les antennes OSM trouvées avec mention opérateur
     const found = antennes.filter(a => {
       const tags = a.tags || {};
-      const op_tag = (tags.operator || tags.network || '').toLowerCase();
-      return op_tag.includes(op.nom.toLowerCase());
+      const opTag = (tags.operator || tags.network || '').toLowerCase();
+      return op.keys.some(k => opTag.includes(k));
     });
-    count = found.length;
 
+    let distMin = '—';
     if (found.length > 0) {
       const dists = found.map(a => {
-        const lat = a.lat || (a.center && a.center.lat);
-        const lon = a.lon || (a.center && a.center.lon);
-        return distanceMetre(currentLat, currentLon, lat, lon);
+        const alat = a.lat || (a.center && a.center.lat);
+        const alon = a.lon || (a.center && a.center.lon);
+        return distanceMetre(lat, lon, alat, alon);
       });
       distMin = Math.round(Math.min(...dists)) + ' m';
     }
 
-    const etat = count > 0
+    const etat = found.length > 0
       ? `<span class="badge vert">✅ Présent</span>`
-      : `<span class="badge orange">⚠️ Non détecté OSM</span>`;
+      : `<span class="badge orange">⚠️ Non détecté</span>`;
 
-    tb.innerHTML += `
-      <tr>
-        <td><b style="color:${op.couleur}">${op.nom}</b></td>
-        <td>${count > 0 ? count : '—'}</td>
-        <td>${distMin}</td>
-        <td>${etat}</td>
-      </tr>`;
+    tb.innerHTML += `<tr>
+      <td><b style="color:${op.couleur}">▶ ${op.nom}</b></td>
+      <td>${found.length || '—'}</td>
+      <td>${distMin}</td>
+      <td>${etat}</td>
+    </tr>`;
   }
 
-  // Lien CartoRadio direct
-  tb.innerHTML += `<tr><td colspan="4" style="font-size:12px;">
-    📡 <a href="https://www.cartoradio.fr/#/cartographie/lonlat/${currentLon}/${currentLat}" target="_blank">Voir sur CartoRadio (ANFR) ↗</a>
+  tb.innerHTML += `<tr><td colspan="4" style="font-size:12px;color:#666;">
+    ⚠️ Données issues d'OpenStreetMap. Pour données officielles :
+    <a href="https://www.cartoradio.fr/#/cartographie/lonlat/${lon}/${lat}" target="_blank">CartoRadio ANFR ↗</a>
   </td></tr>`;
 }
 
 function distanceMetre(lat1, lon1, lat2, lon2) {
   const R = 6371000;
-  const dLat = (lat2-lat1)*Math.PI/180;
-  const dLon = (lon2-lon1)*Math.PI/180;
-  const a = Math.sin(dLat/2)*Math.sin(dLat/2) +
-    Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*
-    Math.sin(dLon/2)*Math.sin(dLon/2);
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180) * Math.cos(lat2*Math.PI/180) * Math.sin(dLon/2)**2;
   return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
 }
 </script>
+
 </body>
 </html>
+
